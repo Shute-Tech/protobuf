@@ -38,6 +38,11 @@ type Marshaler struct {
 	// EmitDefaults specifies whether to render fields with zero values.
 	EmitDefaults bool
 
+	// Int64AsInt specifies whether to render int64/uint64 values as integers,
+	// as opposed to string values. This violates the protobuf JSON specification
+	// but may be necessary for compatibility with some JSON parsers.
+	Int64AsInt bool
+
 	// Indent controls whether the output is compact or not.
 	// If empty, the output is compact JSON. Otherwise, every JSON object
 	// entry and JSON array value will be on its own line.
@@ -546,7 +551,14 @@ func (w *jsonWriter) marshalSingularValue(fd protoreflect.FieldDescriptor, v pro
 				return nil
 			}
 		case int64, uint64:
-			w.write(fmt.Sprintf(`"%d"`, v.Interface()))
+			// Check if Int64AsInt option is enabled
+			if w.Int64AsInt {
+				// Render as integer (violates protobuf JSON spec but may be needed for compatibility)
+				w.write(fmt.Sprintf(`%d`, v.Interface()))
+			} else {
+				// Default behavior: render as string (follows protobuf JSON spec)
+				w.write(fmt.Sprintf(`"%d"`, v.Interface()))
+			}
 			return nil
 		}
 
